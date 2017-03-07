@@ -18,6 +18,7 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
 + (instancetype)animationFromJSON:(NSDictionary *)animationJSON NS_SWIFT_NAME(init(json:));
 
 - (instancetype)initWithContentsOfURL:(NSURL *)url;
+- (instancetype)initWithDownloadFileURL:(NSURL *)url;
 
 @property (nonatomic, readonly) BOOL isAnimationPlaying;
 @property (nonatomic, assign) BOOL loopAnimation;

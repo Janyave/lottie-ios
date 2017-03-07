@@ -248,6 +248,49 @@
   return self;
 }
 
+- (instancetype)initWithDownloadFileURL:(NSURL *)url{
+    self = [super initWithFrame:CGRectZero];
+    if (self) {
+        LOTComposition *laScene = [[LOTAnimationCache sharedCache] animationForKey:url.absoluteString];
+        if (laScene) {
+            [self _initializeAnimationContainer];
+            [self _setupWithSceneModel:laScene restoreAnimationState:NO];
+        } else {
+            _animationState = [[LOTAnimationState alloc] initWithDuration:LOT_singleFrameTimeValue layer:nil frameRate:@1];
+            
+            dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+            dispatch_async(queue, ^{
+                NSURLSession *session = [NSURLSession sharedSession];
+                NSURLSessionDownloadTask *task = [session downloadTaskWithURL:url completionHandler:^(NSURL * __nullable location, NSURLResponse * __nullable response, NSError * __nullable error) {
+                    NSDictionary *dict = nil;
+                    BOOL isSuccess = NO;
+                    if (error == nil) {
+                        NSData *animationData = [NSData dataWithContentsOfFile:[location path]];
+                        if (!animationData) {
+                            return;
+                        }
+                        NSError *error;
+                        NSDictionary  *animationJSON = [NSJSONSerialization JSONObjectWithData:animationData
+                                                                                       options:0 error:&error];
+                        if (error || !animationJSON) {
+                            return;
+                        }
+                        
+                        LOTComposition *laScene = [[LOTComposition alloc] initWithJSON:animationJSON];
+                        dispatch_async(dispatch_get_main_queue(), ^(void){
+                            [[LOTAnimationCache sharedCache] addAnimation:laScene forKey:url.absoluteString];
+                            [self _initializeAnimationContainer];
+                            [self _setupWithSceneModel:laScene restoreAnimationState:YES];
+                        });
+                    }
+                }];
+                [task resume];
+            });
+        }
+    }
+    return self;
+}
+
 - (instancetype)initWithModel:(LOTComposition *)model {
   self = [super initWithFrame:model.compBounds];
   if (self) {
